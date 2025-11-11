@@ -1,0 +1,17 @@
+{
+  "pythonVenv": "C:\\Users\\louis\\Desktop\\Dev\\projets\\chess_analyzer\\venv",
+  "frontend": {
+    "url": "http://localhost:5173"
+  },
+  "backend": {
+    "host": "localhost",
+    "port": 5000
+  },
+  "window": {
+    "title": "MyVersapyApp",
+    "width": 1024,
+    "height": 768,
+    "resizable": true,
+    "fullscreen": false
+  }
+}
