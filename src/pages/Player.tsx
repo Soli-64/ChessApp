@@ -2,9 +2,8 @@ import { Chess, type Square } from 'chess.js';
 import { useEffect, useRef, useState } from 'react';
 import { Chessboard, type ChessboardOptions, type PieceDropHandlerArgs, type SquareHandlerArgs } from 'react-chessboard';
 import { invoke } from 'versapy/api';
-import { useEloManager } from './hooks/GameUtils';
+import { useEloManager } from '../hooks/GameUtils';
 
-import './index.css';
 
 enum Players {WHITE="w",BLACK="b"}
 
@@ -13,7 +12,7 @@ type BackResponse = {
     eval: any
 }
 
-function App() {
+function PlayerView() {
 
   const chessGameRef = useRef(new Chess());
   const chessGame = chessGameRef.current;
@@ -169,4 +168,4 @@ function App() {
   )
 }
 
-export default App
+export default PlayerView

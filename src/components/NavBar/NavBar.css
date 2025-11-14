@@ -1,0 +1,36 @@
+
+.navbar-container {
+    position: absolute;
+    width: 4vw;
+    height: 100vh;
+    background-color: rgb(32, 32, 32);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: start;
+    gap: 2vh;
+    padding-top: 2vh;
+    border-right: 1px solid rgb(95, 95, 95);
+}
+
+.navbar-btn {
+    width: 3vw;
+    height: 6vh;
+    background-color: var(--c-dark-bg);
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+    border: 1px solid rgb(68, 68, 68);
+    border-radius: 10px;
+    transition: all .5s;
+}
+
+.navbar-btn:hover {
+    background-color: rgb(56, 56, 56);
+    transition: all .5s;
+}
+
+.navbar-link {
+    color: white;
+    text-decoration: none;
+}
