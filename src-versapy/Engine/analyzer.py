@@ -23,47 +23,29 @@ class Analyzer:
         self.engine_path = model_path
         self.setup()
 
-    def analyze_pgn_string(self, pgn_input: str) -> str:
-        engine = chess.engine.SimpleEngine.popen_uci(self.engine_path)
-        
-        pgn_io = StringIO(pgn_input)
-        output_io = StringIO()
+    def analyze_position(self, fen_data: str):
+        try:
+            board = chess.Board(fen_data)
+            with chess.engine.SimpleEngine.popen_uci(self.engine_path) as engine:
+                info = engine.analyse(board, chess.engine.Limit(time=0.5))
+                
+                print(info["score"].white().score())
+                score = info["score"].white().score() / 100 if info["score"].white().score() else None
+                pv = info.get("pv", [])
+                best_move = pv[0].uci() if pv else None
 
-        while True:
-            game = chess.pgn.read_game(pgn_io)
-            if game is None:
-                break
-
-            node = game
-            board = game.board()
-
-            for move in game.mainline_moves():
-                board.push(move)
-
-                info = engine.analyse(board, chess.engine.Limit(time=0.1))
-                print(info)
-                score = info["score"].white()
-                # best_move = info["pv"][0].uci() if info["pv"] else "??"
-
-                eval_str = format_eval(score)
-                comment = f"{eval_str}"
-
-                current_node = node.variations[0]
-                if current_node.comment:
-                    current_node.comment += " " + comment
-                else:
-                    current_node.comment = comment
-
-                node = current_node
-
-            exporter = chess.pgn.StringExporter(headers=True, variations=True, comments=True)
-            output_io.write(game.accept(exporter))
-
-        engine.quit()
-        return output_io.getvalue()
+                return {
+                    "eval": str(score),     
+                    "bestMove": best_move 
+                }
+        except Exception as e:
+            print("Erreur analyse:", e)
+            return {"eval": "Erreur", "bestMove": None}
 
     def setup(self):
-
+        
         @vpy.expose
-        def analyze(pgn_data):
-            return self.analyze_pgn_string(pgn_data)
+        def analyze_position(fen_data):
+            return self.analyze_position(fen_data)
+
+        

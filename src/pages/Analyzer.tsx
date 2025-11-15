@@ -1,106 +1,110 @@
-import { Chess } from "chess.js";
-import { useCallback, useEffect, useState } from "react";
-import { Chessboard } from "react-chessboard";
+import { Chess, Move, type Square } from "chess.js";
+import { useEffect, useState } from "react";
+import { Chessboard, type ChessboardOptions } from "react-chessboard";
 import { invoke } from "versapy/api";
+import "./styles/Analyzer.css";
 
-interface MoveAnalysis {
-  move: string;        // ex: "e2e4"
-  eval: string;        // ex: "+0.45" ou "#3"
-  bestMove?: string;   // ex: "d2d4"
-  isMate: boolean;
+interface Analysis {
+  eval: string;
+  bestMove: string | null;
 }
 
 const AnalyzerView = () => {
-  const [pgn, setPgn] = useState<string>("");
-  const [analyzedPgn, setAnalyzedPgn] = useState<string>("");
   const [chess, setChess] = useState<Chess | null>(null);
+  const [moveList, setMoveList] = useState<string[]>([]); // SAN moves
   const [currentMove, setCurrentMove] = useState(0);
-  const [moveHistory, setMoveHistory] = useState<MoveAnalysis[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Charger et analyser le PGN
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("file change")
+  const [position, setPosition] = useState(chess?.fen())
+
+  const evalToPercent = (evalStr: string): number => {
+    if (evalStr == "None") {
+      return 0
+    } else {
+      const clean = evalStr.replace(/[+#]/g, "");
+      const value = parseFloat(clean) || 0;
+      const clamped = Math.max(-10, Math.min(10, value));
+      return ((clamped + 10) / 20) * 100;
+    }
+  };
+
+  // 1. Charger le PGN
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async (event) => {
-      //@ts-ignore
-      const rawPgn = event.target.result;
-      setPgn(rawPgn as string);
-      setIsLoading(true);
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const game = new Chess();
+      game.loadPgn(text)
 
-      try {
-        const result = await invoke("analyze", { pgn_data: rawPgn });
-        setAnalyzedPgn(result as string);
-      } catch (err) {
-        console.error("Analyse échouée", err);
-      } finally {
-        setIsLoading(false);
-      }
+      setChess(game);
+
+      const players = chess?.getHeaders()
+      console.log(chess, players)
+
+      const moves = game.history();
+      setMoveList(moves);
+      setCurrentMove(0);
+      goToMove(0); 
+
     };
     reader.readAsText(file);
   };
 
-  // Parser le PGN annoté
-  const parseAnalyzedPgn = useCallback(() => {
-    if (!analyzedPgn || !pgn) return;
+  // 2. Aller à un coup
+  const goToMove = async (index: number) => {
+    if (!chess || index < 0 || index > moveList.length) return;
 
-    const game = new Chess();
-    game.loadPgn(analyzedPgn);
-    const history = game.history({ verbose: true });
-    const moves: MoveAnalysis[] = [];
-
-    let node: any = game;
-    console.log(node)
-    for (const move of history) {
-        // if (move.starts)
-        const comment = node._comments[history.indexOf(move)] || "";
-        
-        // Extraire [%eval ...] et [uci]
-        const evalMatch = comment.match(/\[%eval ([^\]]+)\]/);
-        const bestMoveMatch = comment.match(/\[([a-h][1-8][a-h][1-8])\]/);
-
-        const evalStr = evalMatch ? evalMatch[1] : "?";
-        const isMate = evalStr.includes("#");
-        const bestMove = bestMoveMatch ? bestMoveMatch[1] : undefined;
-
-        moves.push({
-            move: move.lan,
-            eval: isMate ? evalStr : evalStr,
-            bestMove,
-            isMate,
-        });
-    }
-
-    setMoveHistory(moves);
-    setChess(game);
-    setCurrentMove(0);
-  }, [analyzedPgn, pgn]);
-
-  useEffect(() => {
-    if (analyzedPgn) {
-      parseAnalyzedPgn();
-    }
-  }, [analyzedPgn]);
-
-  // Navigation
-  const goToMove = (index: number) => {
-    if (!chess || index < 0 || index > moveHistory.length) return;
-    console.log(index)
-    // chess.reset();
-    const moves = chess.history({ verbose: true });
-    console.log(moves)
+    // Réinitialise + rejoue
+    chess.reset();
     for (let i = 0; i < index; i++) {
-      const [from, to] = [moves[i].from, moves[i].to]
-      chess.move({from, to, promotion: "q"});
+      const san = moveList[i];
+      const move = chess.move(san);
+      if (!move) {
+        console.error("Mouvement invalide:", san);
+        return;
+      }
     }
+
     setCurrentMove(index);
+    setPosition(chess.fen())
+    await analyzePosition();
   };
 
-  const currentAnalysis = currentMove < moveHistory.length ? moveHistory[currentMove] : null;
-  const totalMoves = moveHistory.length;
+  // 3. Analyse
+  const analyzePosition = async () => {
+    setIsAnalyzing(true);
+    try {
+      const result = await invoke("analyze_position", { fen_data: chess?.fen() }) as Analysis;
+      setAnalysis(result);
+    } catch (err: any) {
+      console.error("Analyse échouée:", err);
+      setAnalysis({ eval: "Erreur", bestMove: null });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (chess && currentMove === 0) {
+      console.log("Position analyzed sent:", chess.fen())
+      analyzePosition();
+    }
+  }, [chess]);
+
+  const totalMoves = moveList.length;
+
+  const BoardConfig: ChessboardOptions = {
+    position: position,
+    arrows: analysis?.bestMove ? [{
+      startSquare: analysis.bestMove.substring(0, 2) as Square,
+      endSquare: analysis.bestMove.substring(2, 4) as Square,
+      color: 'rgb(0, 128, 0)'
+    }] : undefined
+  }; 
 
   return (
     <div className="analyzer">
@@ -108,12 +112,18 @@ const AnalyzerView = () => {
         <input type="file" accept=".pgn" onChange={handleFileChange} />
       </div>
 
-      {isLoading && <div>Analyse en cours...</div>}
-
-      {chess && totalMoves > 0 && (
+      {chess && (
         <>
           <div className="board">
-            <Chessboard position={chess.fen()} />
+          <div className="eval-bar">
+            <div 
+              className="eval-fill"
+              style={{ 
+                height: `${evalToPercent(analysis?.eval || "0")}%` 
+              }}
+            />
+          </div>
+            <Chessboard options={BoardConfig} />
           </div>
 
           <div className="navigation">
@@ -125,7 +135,7 @@ const AnalyzerView = () => {
             </button>
 
             <span className="move-info">
-              Coup {currentMove + 1} / {totalMoves + 1}
+              {currentMove === 0 ? "Position initiale" : `Coup ${currentMove} / ${totalMoves}`}
             </span>
 
             <button onClick={() => goToMove(currentMove + 1)} disabled={currentMove === totalMoves}>
@@ -143,26 +153,37 @@ const AnalyzerView = () => {
             />
           </div>
 
-          {currentAnalysis && (
-            <div className="analysis-panel">
-              <h3>Analyse du coup</h3>
-              <p>
-                <strong>Joué :</strong> {currentAnalysis.move}
-              </p>
-              <p>
-                <strong>Évaluation :</strong>{" "}
-                <span className={currentAnalysis.eval.startsWith('+') ? 'positive' : currentAnalysis.eval.startsWith('-') ? 'negative' : ''}>
-                  {currentAnalysis.eval}
-                </span>
-              </p>
-              {currentAnalysis.bestMove && (
+          <div className="analysis-panel">
+            <h3>Analyse {isAnalyzing && "(calcul...)"}</h3>
+            {analysis && (
+              <>
                 <p>
-                  <strong>Meilleur coup suggéré :</strong> {currentAnalysis.bestMove}
+                  <strong>Évaluation :</strong>{" "}
+                  <span
+                    className={
+                      analysis.eval.startsWith("+")
+                        ? "positive"
+                        : analysis.eval.startsWith("-")
+                        ? "negative"
+                        : ""
+                    }
+                  >
+                    {analysis.eval}
+                  </span>
                 </p>
-              )}
-            </div>
-          )}
+                {analysis.bestMove && (
+                  <p><strong>Meilleur coup :</strong> {analysis.bestMove}</p>
+                )}
+              </>
+            )}
+          </div>
         </>
+      )}
+
+      {!chess && (
+        <div className="placeholder">
+          <p>Chargez un fichier PGN pour commencer.</p>
+        </div>
       )}
     </div>
   );

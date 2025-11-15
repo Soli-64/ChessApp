@@ -20,7 +20,7 @@ export const NabBar = (props: NavBarProps) => {
         <div className="navbar-container">
             {
                 links.map(l => (
-                    <button onClick={() => navigate(l.path)} className="navbar-btn">
+                    <button key={l.name} onClick={() => navigate(l.path)} className="navbar-btn">
                         {l.name[0]}
                     </button>
                 ))
