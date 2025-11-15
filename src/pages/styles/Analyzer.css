@@ -1,23 +1,75 @@
+
 .analyzer {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    font-family: system-ui, sans-serif;
-  }
-  
-.file-input input {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    background: none;
-    font-size: 16px;
+  display: flex;
+  flex-direction: row;
 }
 
-.board {
-  margin: 30px 0;
+.file-input input {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-size: 16px;
+}
+
+.analysis-left-container {
   display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  width: 45vw;
+  align-items: center;
   justify-content: center;
+}
+
+.analysis-right-container {
+  padding: 2em;
+  display: flex;
+  flex-direction: column;
+}
+
+.analysis-headers {
+  p {
+    color: white;
+  }
+  .move-list {
+    overflow-y: auto;
+    height: 50vh;
+  }
+}
+
+.board-container {
+  margin-top: 5vh;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 4px;
+  width: 45vw;
+}
+
+/* Restrict board size*/
+.analysis-board {
+  width: 40vw;
+  height: auto;
+}
+
+.eval-bar {
+  width: 16px;
+  height: auto; /* Same heigh than board*/
+  background: #202020;
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  margin-left: 16px;
+  border: 2px solid #202020;
+}
+
+.eval-fill {
+  width: 100%;
+  background: white;
+  position: absolute;
+  bottom: 0;
+  transition: height 0.3s ease;
 }
 
 .navigation {
@@ -85,22 +137,4 @@
   color: #666;
   font-style: italic;
   margin-top: 40px;
-}
-
-.eval-bar {
-  width: 16px;
-  height: 480px; /* même hauteur que le plateau */
-  background: #333;
-  border-radius: 8px;
-  overflow: hidden;
-  position: relative;
-  margin-left: 16px;
-}
-
-.eval-fill {
-  width: 100%;
-  background: white;
-  position: absolute;
-  bottom: 0;
-  transition: height 0.3s ease;
 }
