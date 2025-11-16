@@ -26,7 +26,7 @@ function PlayerView() {
 
   const [botElo, setBotElo] = useEloManager(800)
 
-  const [gameEnded, setGameEnded] = useState<boolean>(true)
+  const [gameEnded, setGameEnded] = useState<boolean>(false)
 
   const makeMove = (from: string, to: string) => {
     chessGame.move({
@@ -47,10 +47,6 @@ function PlayerView() {
       console.error('No move or eval in bot return')
     }
   }
-
-  useEffect(() => {
-    
-  }, [botElo])
 
   useEffect(() => {
     if (!(chessGame.isGameOver() || chessGame.isDraw())) {
