@@ -1,4 +1,4 @@
-import { Chess, type Square } from 'chess.js';
+import { Chess, WHITE, type Square } from 'chess.js';
 import { useEffect, useRef, useState } from 'react';
 import { Chessboard, type ChessboardOptions, type PieceDropHandlerArgs, type SquareHandlerArgs } from 'react-chessboard';
 import { invoke } from 'versapy/api';
@@ -25,6 +25,8 @@ function PlayerView() {
   const [squareStyles, setSquareStyles] = useState({})
 
   const [botElo, setBotElo] = useEloManager(800)
+
+  const [gameEnded, setGameEnded] = useState<boolean>(true)
 
   const makeMove = (from: string, to: string) => {
     chessGame.move({
@@ -57,6 +59,7 @@ function PlayerView() {
       }
     } else if (chessGame.isGameOver() || chessGame.isDraw()) {
       console.log("Game ended")
+      setGameEnded(true)
     }
   }, [chessGame.fen()]);
 
@@ -146,6 +149,30 @@ function PlayerView() {
         <div className='board'>
           <Chessboard options={chessboardOptions} />;
         </div>
+        {
+          gameEnded &&
+          <div style={{
+            position: "absolute",
+            width: "20vw",
+            height: "30vh",
+            backgroundColor: "rgb(44, 44, 44)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "space-around",
+            padding: "5vh 0",
+          }}>
+            <p
+              style={{
+                color: "white",
+              }}
+            >Game Ended</p>
+            <button onClick={() => {
+              reset()
+              setGameEnded(false)
+            }}>New game</button>
+          </div>
+        }
       </div>
       <div className='right_container'>
           <div>
